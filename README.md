@@ -16,7 +16,8 @@
 - Non-Rigid ICP
 - Texture transfer
 
-![devenir_registration_20230506](https://user-images.githubusercontent.com/1129855/236621269-a3fa8535-2838-4545-868c-968c8ec82eb4.gif)
+![devenir_registration_2_20230506](https://user-images.githubusercontent.com/1129855/236632057-db247b4f-950a-483f-b2da-d37a2f749934.gif)
+
 
 ## Build
 
