@@ -1,0 +1,72 @@
+name: CMake
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+env:
+  # Customize the CMake build type here (Release, Debug, RelWithDebInfo, etc.)
+  BUILD_TYPE: Debug
+
+jobs:
+  build_clang:
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v2
+
+      - name: Submodule Update
+        run: git submodule update --init --recursive
+
+      - name: Setup GLFW
+        run: sudo apt install libgl-dev libxrandr-dev libxinerama-dev libxcursor-dev libxi-dev
+
+      - name: Install Clang
+        uses: egor-tensin/setup-clang@v1
+
+      - name: Configure CMake Clang
+        env:
+          CC: clang
+          CXX: clang++
+        run: cmake -B ${{github.workspace}}/build_clang -DCMAKE_BUILD_TYPE=${{env.BUILD_TYPE}}
+
+      - name: Build Clang
+        env:
+          CC: clang
+          CXX: clang++
+        run: cmake --build ${{github.workspace}}/build_clang --config ${{env.BUILD_TYPE}} -j 2
+
+      - name: Test Clang
+        working-directory: ${{github.workspace}}/build_clang
+        run: ctest -C ${{env.BUILD_TYPE}}
+
+  build_gcc:
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v2
+
+      - name: Submodule Update
+        run: git submodule update --init --recursive
+
+      - name: Setup GLFW
+        run: sudo apt install libgl-dev libxrandr-dev libxinerama-dev libxcursor-dev libxi-dev
+
+      - name: Configure CMake GCC
+        env:
+          CC: gcc
+          CXX: g++
+        run: cmake -B ${{github.workspace}}/build_gcc -DCMAKE_BUILD_TYPE=${{env.BUILD_TYPE}}
+
+      - name: Build GCC
+        env:
+          CC: gcc
+          CXX: g++
+        # Build your program with the given configuration
+        run: cmake --build ${{github.workspace}}/build_gcc --config ${{env.BUILD_TYPE}} -j 2
+
+      - name: Test GCC
+        working-directory: ${{github.workspace}}/build_gcc
+        run: ctest -C ${{env.BUILD_TYPE}}
