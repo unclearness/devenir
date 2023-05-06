@@ -1,6 +1,4 @@
-# devenir
-
-Interactive Rigid/Non-Rigid ICP Tool for Meshes
+# devenir: Interactive Rigid/Non-Rigid ICP Tool for Meshes
 
 ## Features
 
