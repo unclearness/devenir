@@ -489,11 +489,17 @@ struct SplitViewInfo {
   }
 
   void ResetGl() {
+    std::unordered_map<RenderableMeshPtr, bool> visibility;
+    for (const auto &mesh : g_meshes) {
+      visibility[mesh] = renderer->GetVisibility(mesh);
+    }
+
     renderer->ClearGlState();
     for (const auto &mesh : g_meshes) {
       renderer->SetMesh(mesh, g_model_matrices.at(mesh), g_update_bvh.at(mesh));
       renderer->AddSelectedPositions(mesh,
                                      ExtractPos(g_selected_positions.at(mesh)));
+      renderer->SetVisibility(mesh, visibility[mesh]);
     }
 
     renderer->Init();
@@ -834,6 +840,9 @@ void LoadMesh(const std::string &path) {
   }
 
   for (auto &view : g_views) {
+    // Temporary set for visibility
+    view.renderer->SetMesh(mesh, g_model_matrices.at(mesh), false);
+
     view.ResetGl();
 
     // Reset camera pos
