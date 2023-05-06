@@ -49,6 +49,15 @@ set_as_cache(GLAD_INSTALL_DIR "${CMAKE_CURRENT_SOURCE_DIR}/third_party/ugu/third
 
 add_subdirectory(${UGU_INSTALL_DIR})
 
+# For OpenMP
+if(UGU_USE_OPENMP)
+  find_package(OpenMP)
+  if(OpenMP_FOUND)
+    set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} ${OpenMP_C_FLAGS}")
+    set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} ${OpenMP_CXX_FLAGS}")
+  endif()
+endif()
+
 file(GLOB IMGUI_SOURCES ${IMGUI_INSTALL_DIR}/*.cpp)
 file(GLOB IMGUI_HEADERS ${IMGUI_INSTALL_DIR}/*.h)
 file(GLOB GLAD_HEADERS ${GLAD_INSTALL_DIR}/include/glad/*.h)
