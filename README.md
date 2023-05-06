@@ -6,7 +6,7 @@ Interactive Rigid/Non-Rigid ICP Tool for Meshes
 
 ### Manual point annotation
 
-- Put and move points on trianular faces (face id + barycentric)
+- Put and move points on triangular faces (face id + barycentric)
 - Import/export Wrap3 compatible json formats
 
 ![devenir_points_20230506](https://user-images.githubusercontent.com/1129855/236621264-07d55793-fced-4349-8114-a50dc9d283aa.gif)
