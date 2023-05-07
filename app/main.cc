@@ -446,6 +446,7 @@ struct SplitViewInfo {
   double trans_speed = 0.0;
   double wheel_speed = 0.0;
   double rotate_speed = 0.0;
+  Eigen::Translation3d offset_to_rot_center = {0.0, 0.0, 0.0};
 
   void Init(uint32_t vidx) {
     std::lock_guard<std::mutex> lock(views_mtx);
@@ -810,7 +811,7 @@ void cursor_pos_callback(GLFWwindow *window, double xoffset, double yoffset) {
 void LoadMesh(const std::string &path) {
   auto ext = ugu::ExtractExt(path);
   auto mesh = ugu::RenderableMesh::Create();
-  if (ext == "obj") {
+  if (ext == "obj" || ext == "OBJ") {
     std::string obj_path = path;
     std::string obj_dir = ExtractDir(obj_path);
     if (!mesh->LoadObj(obj_path, obj_dir)) {
@@ -836,6 +837,7 @@ void LoadMesh(const std::string &path) {
     g_update_bvh[mesh] = true;
     g_selected_positions[mesh] = {};
   } else {
+    LOGE("Supported extensiton: .obj\n");
     return;
   }
 
@@ -881,7 +883,9 @@ void window_size_callback(GLFWwindow *window, int width, int height) {
   g_height = height;
 
   for (auto &view : g_views) {
+    auto org_c2w = view.camera->c2w();
     view.Reset();
+    view.camera->set_c2w(org_c2w);
   }
 }
 
@@ -969,7 +973,9 @@ void ProcessDrags() {
                   2 * ugu::pi * diff[1] / g_height * view.rotate_speed,
                   right_axis);
 
-          Eigen::Affine3d cam_pose_new = R_offset * cam_pose_cur;
+          Eigen::Affine3d cam_pose_new = view.offset_to_rot_center * R_offset *
+                                         view.offset_to_rot_center.inverse() *
+                                         cam_pose_cur;
 
           view.camera->set_c2w(cam_pose_new);
         }
@@ -1390,6 +1396,8 @@ void DrawImguiGeneralWindow(bool &reset_points) {
 }
 
 void DrawImguiMeshes(SplitViewInfo &view, bool &reset_points) {
+  const auto &transed_stats = view.renderer->GetTransedStats();
+
   for (size_t i = 0; i < g_meshes.size(); i++) {
     bool v = view.renderer->GetVisibility(g_meshes[i]);
     std::string label =
@@ -1406,6 +1414,33 @@ void DrawImguiMeshes(SplitViewInfo &view, bool &reset_points) {
 
     if (ImGui::Button(("Focus###focus" + std::to_string(i)).c_str())) {
       view.SetProperCameraForTargetMesh(g_meshes[i]);
+    }
+
+    const auto &stat = transed_stats.at(g_meshes[i]);
+    ImGui::Text("Bounding Box Max: (%f, %f, %f)", stat.bb_max.x(),
+                stat.bb_max.y(), stat.bb_max.z());
+    ImGui::Text("Bounding Box Min: (%f, %f, %f)", stat.bb_min.x(),
+                stat.bb_min.y(), stat.bb_min.z());
+    ImGui::Text("Object Center   : (%f, %f, %f)", stat.center.x(),
+                stat.center.y(), stat.center.z());
+
+    if (ImGui::Button(
+            ("Set center as rotation center###rot_center" + std::to_string(i))
+                .c_str())) {
+      view.offset_to_rot_center.x() = static_cast<double>(stat.center.x());
+      view.offset_to_rot_center.y() = static_cast<double>(stat.center.y());
+      view.offset_to_rot_center.z() = static_cast<double>(stat.center.z());
+    }
+
+    if (ImGui::Button(
+            ("Move center to origin###move_center" + std::to_string(i))
+                .c_str())) {
+      Eigen::Affine3f model_mat = g_model_matrices.at(g_meshes[i]);
+      g_model_matrices[g_meshes[i]] =
+          Eigen::Translation3f(-stat.center) * model_mat;
+
+      g_update_bvh[g_meshes[i]] = true;
+      reset_points = true;
     }
 
     {
@@ -1444,6 +1479,14 @@ void DrawImguiMeshes(SplitViewInfo &view, bool &reset_points) {
         g_update_bvh[g_meshes[i]] = true;
         reset_points = true;
       }
+    }
+
+    if (ImGui::Button(("Apply transform###apply_transform" + std::to_string(i))
+                          .c_str())) {
+      g_meshes[i]->Transform(g_model_matrices[g_meshes[i]]);
+      g_model_matrices[g_meshes[i]] = Eigen::Affine3f::Identity();
+      g_update_bvh[g_meshes[i]] = true;
+      reset_points = true;
     }
 
     static char mesh_export_path_buf[1024] = "./mesh.obj";
@@ -1609,6 +1652,17 @@ void DrawImguiCamera(SplitViewInfo &view) {
   if (ImGui::InputDouble("trans speed", &view.trans_speed)) {
   }
   if (ImGui::InputDouble("wheel speed", &view.wheel_speed)) {
+  }
+
+  float rot_center[3] = {
+      static_cast<float>(view.offset_to_rot_center.x()),
+      static_cast<float>(view.offset_to_rot_center.y()),
+      static_cast<float>(view.offset_to_rot_center.z()),
+  };
+  if (ImGui::InputFloat3("Mouse rotation center", rot_center)) {
+    view.offset_to_rot_center.x() = static_cast<double>(rot_center[0]);
+    view.offset_to_rot_center.y() = static_cast<double>(rot_center[1]);
+    view.offset_to_rot_center.z() = static_cast<double>(rot_center[2]);
   }
 
   Eigen::Vector2f nearfar;
@@ -1854,6 +1908,22 @@ void Draw(GLFWwindow *window) {
   glfwSwapBuffers(window);
 }
 
+void PrintUsage() {
+  std::string usage =
+      R"(########################### Devenir User Guide #################################
+Load Model (.obj only)      : "Load Mesh" button or drag & drop
+
+Camera Translation XY       : Wheel drag
+Camera Translation Z (zoom) : Wheel scroll
+Camera Rotation (pitch, yaw): Left drag
+
+Point Add                   : Right click on a mesh
+Point Move                  : Right drag near a point
+###############################################################################)";
+
+  std::cout << usage << std::endl;
+}
+
 }  // namespace
 
 int main(int, char **) {
@@ -1899,7 +1969,7 @@ int main(int, char **) {
 
   // Create window with graphics context
   GLFWwindow *window = glfwCreateWindow(
-      g_width, g_height, "devenir: Interactive Rigid/Non-Rigid ICP Tool", NULL,
+      g_width, g_height, "Devenir: An Interactive Mesh Retopology Tool", NULL,
       NULL);
 
   SetupWindow(window);
@@ -1938,6 +2008,8 @@ int main(int, char **) {
   }
 
   std::thread algorithm_thread(AlgorithmProcess);
+
+  PrintUsage();
 
   //  Main loop
   while (!glfwWindowShouldClose(window)) {

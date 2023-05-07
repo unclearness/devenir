@@ -1,7 +1,7 @@
 cmake_minimum_required(VERSION 3.17)
 
 set(PROJECT_NAME devenir)
-project(${PROJECT_NAME} LANGUAGES CXX C VERSION 0.0.1 DESCRIPTION "devenir: Interactive Rigid/Non-Rigid ICP Tool")
+project(${PROJECT_NAME} LANGUAGES CXX C VERSION 0.0.1 DESCRIPTION "devenir")
 
 set(CMAKE_VERBOSE_MAKEFILE TRUE)
 

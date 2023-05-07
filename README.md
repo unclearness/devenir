@@ -1,7 +1,9 @@
-# devenir: Interactive Rigid/Non-Rigid ICP Tool for Meshes
+# Devenir: An Interactive Mesh Retopology Tool
 
 ## Features
+
 ### Manual 3D Point Annotation
+
 <!-- prettier-ignore -->
 <table>
   <thead>
@@ -11,9 +13,10 @@
     </tr>
   </thead>
 <td>
-  
+
+- Import/export .obj
 - Put and move points on triangular faces (face id + barycentric)
-- Import/export Wrap3 compatible json formats
+- Import/export [Wrap3](https://www.russian3dscanner.com/) compatible json formats
 
 </td>
 <td>
@@ -25,6 +28,7 @@
 </table>
 
 ### Registration & Texturing
+
 <table>
   <thead>
     <tr>
@@ -56,3 +60,14 @@ Linux (clang/gcc) and Windows (MSVC) are supported.
   - To pull dependencies registered as git submodule.
 - Use CMake with `CMakeLists.txt`.
   - `reconfigure.bat` and `rebuild.bat` are command line CMake utilities for Windows 10/11 and Visual Studio 2017-2022.
+
+## Motivation
+
+Non-rigid registration is still an active research area in academia, but it also has a commercial aspect.
+The semi-manual mesh retopology process, one of the critical steps in the CG industry, relies on non-rigid registration techniques.
+In addition to algorithms, manual work with GUI, for example, adding correspondence points between geometries, is practically essential to ensure quality.
+
+Excellent commercial software exists for this purpose, but none of the open tools have been found to my satisfaction.
+I have found many open research codes for non-rigid registration, but most do not have an interactive GUI.
+
+The goal of this project is to create an open interactive retopology tool.
