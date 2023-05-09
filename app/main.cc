@@ -130,7 +130,8 @@ struct IcpData {
   bool with_scale = false;
   CorrespFinderPtr corresp_finder = nullptr;
   IcpCallbackFunc callback = nullptr;
-  bool point2plane = true;
+  IcpCorrespType corresp_type = IcpCorrespType::kPointToPlane;
+  IcpLossType loss_type = IcpLossType::kPointToPlane;
 };
 
 struct NonrigidIcpData {
@@ -207,20 +208,13 @@ void IcpProcess() {
     Timer timer;
     timer.Start();
 
-    if (g_icp_data.point2plane) {
-      RigidIcpPointToPlane(g_icp_data.src_points, g_icp_data.dst_points,
-                           g_icp_data.src_normals, g_icp_data.dst_normals,
-                           g_icp_data.dst_faces, g_icp_data.terminate_criteria,
-                           g_icp_data.corresp_criteria, g_icp_data.output,
-                           g_icp_data.with_scale, g_icp_data.corresp_finder,
-                           g_icp_data.callback);
-    } else {
-      RigidIcpPointToPoint(g_icp_data.src_points, g_icp_data.dst_points,
-                           g_icp_data.src_normals, g_icp_data.dst_normals,
-                           g_icp_data.terminate_criteria,
-                           g_icp_data.corresp_criteria, g_icp_data.output,
-                           g_icp_data.with_scale, nullptr, g_icp_data.callback);
-    }
+    RigidIcp(
+        g_icp_data.src_points, g_icp_data.dst_points, g_icp_data.src_normals,
+        g_icp_data.dst_normals, g_icp_data.dst_faces, g_icp_data.corresp_type,
+        g_icp_data.loss_type, g_icp_data.terminate_criteria,
+        g_icp_data.corresp_criteria, g_icp_data.output, g_icp_data.with_scale,
+        nullptr, g_icp_data.corresp_finder, -1, g_icp_data.callback);
+
     timer.End();
     g_callback_message =
         "ICP took " + std::to_string(timer.elapsed_msec() / 1000) + " sec.";
@@ -1259,10 +1253,19 @@ void DrawImguiGeneralWindow(bool &reset_points) {
     }
   }
   if (ImGui::TreeNodeEx("Option####OptionRigid ICP")) {
-    if (ImGui::Checkbox("Check: point-to-plane. "
-                        "Uncheck:point-to-point###rigid_icp_point2plane",
-                        &g_icp_data.point2plane)) {
-    }
+    static int corresp_mode = 1;
+    ImGui::Text("Correspondence");
+    ImGui::RadioButton("Point(Vertex)-to-Surface(Triangle)", &corresp_mode, 1);
+    ImGui::SameLine();
+    ImGui::RadioButton("Point(Vertex)-to-Point(Vertex)", &corresp_mode, 0);
+    g_icp_data.corresp_type = static_cast<IcpCorrespType>(corresp_mode);
+
+    static int loss_mode = 1;
+    ImGui::Text("Loss");
+    ImGui::RadioButton("Point-to-Plane", &loss_mode, 1);
+    ImGui::SameLine();
+    ImGui::RadioButton("Point-to-Point", &loss_mode, 0);
+    g_icp_data.loss_type = static_cast<IcpLossType>(loss_mode);
 
     if (ImGui::InputInt("max iter###rigid_icp_max_iter",
                         &g_icp_data.terminate_criteria.iter_max)) {
