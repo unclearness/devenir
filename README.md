@@ -61,6 +61,11 @@ Linux (clang/gcc) and Windows (MSVC) are supported.
 - Use CMake with `CMakeLists.txt`.
   - `reconfigure.bat` and `rebuild.bat` are command line CMake utilities for Windows 10/11 and Visual Studio 2017-2022.
 
+## Test
+
+Try to align `third_party/ugu/data/face/mediapipe_face.obj` onto `third_party/ugu/data/face/lpshead/head_triangulated.obj`.
+Default parameters would work.
+
 ## Motivation
 
 Non-rigid registration is still an active research area in academia, but it also has a commercial aspect.
