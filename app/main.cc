@@ -1,5 +1,6 @@
 #include <limits>
 #include <mutex>
+#include <random>
 #include <thread>
 
 #include "glad/gl.h"
@@ -803,6 +804,11 @@ void cursor_pos_callback(GLFWwindow *window, double xoffset, double yoffset) {
 }
 
 void LoadMesh(const std::string &path) {
+  if (4 <= g_meshes.size()) {
+    LOGE("#max_geom is 4\n");
+    return;
+  }
+
   auto ext = ugu::ExtractExt(path);
   auto mesh = ugu::RenderableMesh::Create();
   if (ext == "obj" || ext == "OBJ") {
@@ -816,9 +822,23 @@ void LoadMesh(const std::string &path) {
     if (mat[0].diffuse_tex.empty()) {
       mat[0].diffuse_tex = Image3b(1, 1);
       auto &col = mat[0].diffuse_tex.at<Vec3b>(0, 0);
-      col[0] = 125;
-      col[1] = 125;
-      col[2] = 200;
+
+      static uint32_t count = 0;
+      static Vec3b color_table[256] = {
+          {125, 125, 200}, {245, 156, 62}, {118, 184, 0}, {32, 33, 36}};
+      if (count == 0) {
+        size_t seed = 0;
+        std::uniform_int_distribution<int> dist(0, 255);
+        std::default_random_engine engine(static_cast<unsigned int>(seed));
+        for (int i = 4; i < 256; i++) {
+          color_table[i][0] = static_cast<uint8_t>(dist(engine));
+          color_table[i][1] = static_cast<uint8_t>(dist(engine));
+          color_table[i][2] = static_cast<uint8_t>(dist(engine));
+        }
+      }
+      col = color_table[count % 256];
+      count++;
+
       mat[0].diffuse_texname = "tmp.png";
       mat[0].diffuse_texpath = "tmp.png";
       mesh->set_materials(mat);
