@@ -7,6 +7,7 @@
 #include "imgui.h"
 #include "imgui_impl_glfw.h"
 #include "imgui_impl_opengl3.h"
+#include "nlohmann/json.hpp"
 #include "ugu/camera.h"
 #include "ugu/image_io.h"
 #include "ugu/inpaint/inpaint.h"
@@ -28,6 +29,21 @@
 using namespace ugu;
 
 namespace {
+
+std::vector<uint32_t> LoadIdsJson(const std::string &path) {
+  nlohmann::json j;
+  std::ifstream ifs(path);
+  ifs >> j;
+  std::vector<uint32_t> ids = j;
+  return ids;
+}
+
+void WriteIdsJson(const std::string &path, const std::vector<uint32_t> &ids) {
+  nlohmann::json j;
+  j = ids;
+  std::ofstream ofs(path);
+  ofs << j;
+}
 
 Eigen::Vector2d g_prev_cursor_pos;
 Eigen::Vector2d g_cursor_pos;
@@ -87,6 +103,7 @@ std::unordered_map<RenderableMeshPtr, std::vector<CastRayResult>>
 
 std::unordered_map<RenderableMeshPtr, Eigen::Affine3f> g_model_matrices;
 std::unordered_map<RenderableMeshPtr, bool> g_update_bvh;
+std::unordered_map<RenderableMeshPtr, std::vector<uint32_t>> g_ignore_poly_ids;
 
 bool g_first_frame = true;
 
@@ -251,6 +268,10 @@ void NonrigidIcpProcess() {
 
     nicp.SetCorrespDistTh(g_nonrigidicp_data.dist_th);
     nicp.SetCorrespNnNum(g_nonrigidicp_data.nn_num);
+
+    const auto &fid_vec = g_ignore_poly_ids.at(g_nonrigidicp_data.src_mesh);
+    std::set<uint32_t> ignore_face_ids(fid_vec.begin(), fid_vec.end());
+    nicp.SetIgnoreFaceIds(ignore_face_ids);
 
     std::vector<PointOnFace> src_landmarks;
     for (const auto &res :
@@ -665,6 +686,7 @@ void Clear() {
   g_mesh_names.clear();
   g_mesh_paths.clear();
   g_selected_positions.clear();
+  g_ignore_poly_ids.clear();
   for (auto &view : g_views) {
     view.ResetGl();
   }
@@ -850,6 +872,7 @@ void LoadMesh(const std::string &path) {
     g_model_matrices[mesh] = Eigen::Affine3f::Identity();
     g_update_bvh[mesh] = true;
     g_selected_positions[mesh] = {};
+    g_ignore_poly_ids[mesh] = {};
   } else {
     LOGE("Supported extensiton: .obj\n");
     return;
@@ -1657,6 +1680,22 @@ void DrawImguiMeshes(SplitViewInfo &view, bool &reset_points) {
         pofs.push_back(pof);
       }
       WritePoints(std::string(export_path_buf), pofs, pof_type);
+    }
+
+    static char ignore_poly_path_buf[1024] = "./ignore_polygons.json";
+    ImGui::InputText(
+        (std::string("Ignore Polygons###polygons_importexport_path") +
+         std::to_string(i))
+            .c_str(),
+        ignore_poly_path_buf, 1024);
+    if (ImGui::Button((std::string("Import###poly_export") + std::to_string(i))
+                          .c_str())) {
+      g_ignore_poly_ids[g_meshes[i]] = LoadIdsJson(ignore_poly_path_buf);
+    }
+    ImGui::SameLine();
+    if (ImGui::Button((std::string("Export###poly_export") + std::to_string(i))
+                          .c_str())) {
+      WriteIdsJson(ignore_poly_path_buf, g_ignore_poly_ids[g_meshes[i]]);
     }
   }
 }
